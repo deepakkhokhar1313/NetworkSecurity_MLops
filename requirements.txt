@@ -1,3 +1,9 @@
 python-dotenv
 pandas
 numpy
+pymongo
+certifi
+
+# -e .
+# -e . -> this is used to trigger setup.py and it normally used
+# at time of deploying any project.
