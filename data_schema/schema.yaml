@@ -1,0 +1,65 @@
+columns:
+  - UsingIP: int64
+  - LongURL: int64
+  - ShortURL: int64
+  - Symbol@: int64
+  - edirecting//: int64
+  - PrefixSuffix-: int64
+  - SubDomains: int64
+  - HTTPS: int64
+  - DomainRegLen: int64
+  - Favicon: int64
+  - NonStdPort: int64
+  - HTTPSDomainURL: int64
+  - RequestURL: int64
+  - AnchorURL: int64
+  - LinksInScriptTags: int64
+  - ServerFormHandler: int64
+  - InfoEmail: int64
+  - AbnormalURL: int64
+  - WebsiteForwarding: int64
+  - StatusBarCust: int64
+  - DisableRightClick: int64
+  - UsingPopupWindow: int64
+  - IframeRedirection: int64
+  - AgeofDomain: int64
+  - DNSRecording: int64
+  - WebsiteTraffic: int64
+  - PageRank: int64
+  - GoogleIndex: int64
+  - LinksPointingToPage: int64
+  - StatsReport: int64
+  - class: int64
+
+numerical_columns:
+  - UsingIP
+  - LongURL
+  - ShortURL
+  - Symbol@
+  - edirecting//
+  - PrefixSuffix-
+  - SubDomains
+  - HTTPS
+  - DomainRegLen
+  - Favicon
+  - NonStdPort
+  - HTTPSDomainURL
+  - RequestURL
+  - AnchorURL
+  - LinksInScriptTags
+  - ServerFormHandler
+  - InfoEmail
+  - AbnormalURL
+  - WebsiteForwarding
+  - StatusBarCust
+  - DisableRightClick
+  - UsingPopupWindow
+  - IframeRedirection
+  - AgeofDomain
+  - DNSRecording
+  - WebsiteTraffic
+  - PageRank
+  - GoogleIndex
+  - LinksPointingToPage
+  - StatsReport
+  - class
