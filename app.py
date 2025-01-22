@@ -1,4 +1,5 @@
 import sys, os
+from networksecurity.utils.ml_utils.model.estimator import NetworkModel
 import pymongo
 from networksecurity.exceptionHandling.exception import NetworkSecurityException
 from networksecurity.logging.logger import logging
@@ -16,6 +17,7 @@ from networksecurity.constants.training_pipeline import (
     DATA_INGESTION_COLLECTION_NAME,
     DATA_INGESTION_DATABASE_NAME
 )
+from fastapi.templating import Jinja2Templates
 
 import certifi
 ca = certifi.where()
@@ -24,7 +26,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 MONGO_DB_URL = os.getenv("MONGO_DB_URL")
-
+template = Jinja2Templates(directory="./templates")
 
 client = pymongo.MongoClient(MONGO_DB_URL, tlsCAFile=ca)
 database = client[DATA_INGESTION_DATABASE_NAME]
@@ -53,6 +55,30 @@ async def train_route():
         return Response("Training is successful")
     except Exception as e:
         raise NetworkSecurityException(e, sys)
-    
+
+
+@app.post("/predict")
+async def predict_route(request: Request, file:UploadFile=File(...)):
+    try:
+        df = pd.read_csv(file.file)
+        preprocessor = load_object("final_models/preprocessor.pkl")
+        final_model = load_object("final_models/model.pkl")
+
+        network_model = NetworkModel(preprocessor=preprocessor,
+                                     model=final_model)
+        
+        y_pred = network_model.predict(df)
+
+        df['predicted_result'] = y_pred
+
+        df.to_csv("prediction_result_data/result.csv")
+
+        table_html = df.to_html(classes='table table-striped')
+        return template.TemplateResponse("table.html",{"request":request,
+                                                       "table":table_html})
+    except Exception as e:
+        raise NetworkSecurityException(e, sys)
+
+
 if __name__ == "__main__":
     app_run(app, host = "localhost", port = 8000)
