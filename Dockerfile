@@ -4,6 +4,9 @@ FROM python:3.13-slim
 # SET WORKING DIRECTORY
 WORKDIR /app
 
+# COPY APPLICATION CODE
+COPY . /app
+
 # INSTALL SYSTEM DEPENDENCIES
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -21,8 +24,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # INSTALL AWS CLI
 RUN pip install --no-cache-dir awscli
 
-# COPY APPLICATION CODE
-COPY . .
 
 # ENVIRONMENT VARIABLES
 ENV PYTHONUNBUFFERED=1 \

@@ -39,12 +39,20 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Free Up Disk Space
+      - name: Optimized Space Cleanup
         run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android
-          sudo apt-get clean
-          docker system prune -a -f
-          sudo rm -rf /tmp/* /var/tmp/*
+          # Always run (fast)
+          sudo find /tmp -mindepth 1 -delete 2>/dev/null || true
+          docker system prune -f
+          
+          # Only run heavy cleanups when needed
+          if [ $(df / --output=avail | tail -1) -lt 5000000 ]; then
+            echo "Low disk space - Running full cleanup"
+            sudo rm -rf /usr/share/dotnet &
+            sudo rm -rf /usr/local/lib/android &
+            sudo apt-get clean &
+            wait
+          fi
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
