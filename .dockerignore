@@ -10,5 +10,4 @@
 **/*.log
 **/Dockerfile
 **/docker-compose*
-**/requirements.txt
 **/README.md
