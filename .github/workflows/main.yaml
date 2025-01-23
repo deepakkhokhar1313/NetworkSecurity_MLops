@@ -1,107 +1,107 @@
-name: workflow
+name: Production Deployment Pipeline
 
 on:
-    push:
-        branches:
-            - master
-        paths-ignore:
-            - 'README.md'
+  push:
+    branches: [master]
+    paths-ignore: ['README.md', 'docs/**']
+
+env:
+  AWS_ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_NAME }}
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
-    integration:
-        name: Continuous Integration
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout Code
-              uses: actions/checkout@v3
-            
-            - name: Lint Code
-              run: echo "Linting repository"
-            
-            - name: Run unit tests
-              run: echo "Running unit tests"
-    
-    build-and-push-ecr-image:
-        name: Continuous Delivery
-        needs: integration
-        runs-on: ubuntu-latest
-        permissions:
-            packages: write
-            contents: read
-        steps:
-          - name: Checkout Code
-            uses: actions/checkout@v3
-          
-          - name: Install utilities
-            run: |
-              sudo apt-get update
-              sudo apt-get install -y jq unzip
-          
-          - name: Configure AWS Credentials
-            uses: aws-actions/configure-aws-credentials@v1
-            with:
-              aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID}}
-              aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
-              aws-region: ${{ secrets.AWS_REGION }}
-          
-          - name: Login to AWS ECR
-            id: login-ecr
-            uses: aws-actions/amazon-ecr-login@v1
-          
-          - name: Build, tag, and push image to Amazon ECR
-            id: build-image
-            env:
-              ECR_REGISTRY: ${{ secrets.AWS_ECR_LOGIN_URI }}
-              ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_NAME }}
-              IMAGE_TAG: latest
-            run: |
-              docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-              docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-              echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+  ci:
+    name: Continuous Integration
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    Continuous-Deployment:
-      needs: build-and-push-ecr-image
-      runs-on: self-hosted
-      steps:
-        - name: Checkout
-          uses: actions/checkout@v3
-        
-        - name: Configure AWS Credentials
-          uses: aws-actions/configure-aws-credentials@v1
-          with:
-            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID}}
-            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
-            aws-region: ${{ secrets.AWS_REGION }}
-        
-        - name: Login to AWS ECR
-          id: login-ecr
-          uses: aws-actions/amazon-ecr-login@v1
-        
-        - name: Pull latest image
-          run: |
-            docker pull ${{ secrets.AWS_ECR_LOGIN_URI }}/${{ secrets.ECR_REPOSITORY_NAME }}:latest
-        
-        - name: Stop and Remove containers if running
-          run: |
-            if [ "$(docker ps -aq -f name=networksecurity13)" ]; then
-              docker stop networksecurity13 || true
-              docker rm -f networksecurity13 || true
-            fi
+      - name: Lint Code
+        run: echo "Running static code analysis"
 
-        - name: Run Docker Container
-          run: |
-            docker run -d \
-              -p 8080:8080 \
-              --ipc=host \
-              --name=networksecurity13 \
-              -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
-              -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
-              -e AWS_REGION="${{ secrets.AWS_REGION }}" \
-              ${{ secrets.AWS_ECR_LOGIN_URI }}/${{ secrets.ECR_REPOSITORY_NAME }}:latest
-        
-        - name: Cleanup unused resources
-          run: |
-            docker system prune -f
+      - name: Unit Tests
+        run: echo "Executing test suite"
+
+  cd:
+    name: Continuous Delivery
+    needs: ci
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Free Up Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android
+          sudo apt-get clean
+          docker system prune -a -f
+          sudo rm -rf /tmp/* /var/tmp/*
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build and Push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.ecr.outputs.registry }}/${{ env.AWS_ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          builder: ${{ steps.buildx.outputs.name }}
+
+  deploy:
+    name: Production Deployment
+    needs: cd
+    runs-on: self-hosted
+    environment: production
+
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Deployment Cleanup
+        run: |
+          docker stop networksecurity13 || true
+          docker rm -f networksecurity13 || true
+          docker system prune -af
+
+      - name: Run Container
+        run: |
+          docker run -d \
+            --name networksecurity13 \
+            --restart unless-stopped \
+            --ipc=host \
+            -p 8080:8080 \
+            -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
+            -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+            -e AWS_REGION="${{ secrets.AWS_REGION }}" \
+            ${{ steps.ecr.outputs.registry }}/${{ env.AWS_ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
 
 
 

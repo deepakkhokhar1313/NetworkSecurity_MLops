@@ -1,0 +1,14 @@
+**/__pycache__
+**/*.py[cod]
+**/.env
+**/.git
+**/.vscode
+**/.idea
+**/node_modules
+**/tests
+**/docs
+**/*.log
+**/Dockerfile
+**/docker-compose*
+**/requirements.txt
+**/README.md
