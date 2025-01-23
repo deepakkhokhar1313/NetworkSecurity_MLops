@@ -11,8 +11,6 @@ from networksecurity.utils.ml_utils.model.estimator import NetworkModel
 from networksecurity.utils.ml_utils.metric.classification_metric import get_classification_score
 import mlflow
 import dagshub
-dagshub.init(repo_owner='deepakkhokhar1313', repo_name='NetworkSecurity_MLops', mlflow=True)
-
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import r2_score
@@ -23,7 +21,16 @@ from sklearn.ensemble import (
     GradientBoostingClassifier,
     RandomForestClassifier
 )
+from dotenv import load_dotenv
+load_dotenv()
 
+
+dagshub.init(repo_owner='deepakkhokhar1313', 
+            repo_name='NetworkSecurity_MLops', 
+            mlflow=True,
+            username="deepakkhokhar1313",
+            password=os.getenv("DAGSHUB_ACCESS_TOKEN")
+             )
 
 class ModelTrainer:
     def __init__(self,
