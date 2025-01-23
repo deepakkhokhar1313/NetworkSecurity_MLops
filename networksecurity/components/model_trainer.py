@@ -28,8 +28,6 @@ load_dotenv()
 dagshub.init(repo_owner='deepakkhokhar1313', 
             repo_name='NetworkSecurity_MLops', 
             mlflow=True,
-            username="deepakkhokhar1313",
-            password=os.getenv("DAGSHUB_ACCESS_TOKEN")
              )
 
 class ModelTrainer:
