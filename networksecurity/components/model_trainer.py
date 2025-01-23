@@ -25,7 +25,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Explicitly use the token for authentication
-dagshub.auth.add_app_token(os.getenv("DAGSHUB_TOKEN"))
+# dagshub.auth.add_app_token(os.getenv("DAGSHUB_TOKEN"))
 dagshub.init(repo_owner='deepakkhokhar1313', 
             repo_name='NetworkSecurity_MLops', 
             mlflow=True,
