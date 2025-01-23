@@ -82,7 +82,7 @@ jobs:
         - name: Stop and Remove containers if running
           run: |
             if docker ps -q --filter "name=networksecurity13" | grep -q .; then
-              docker stop networksecurity13 && docker rm -fv networksecurity13
+              docker stop networksecurity13 && docker rm -fv networksecurity13 && docker container prune -f && docker image prune -f && docker volume prune -f
             fi
 
         - name: Run Docker Image to serve users
