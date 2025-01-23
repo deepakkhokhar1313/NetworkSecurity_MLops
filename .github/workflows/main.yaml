@@ -5,10 +5,6 @@ on:
     branches: [master]
     paths-ignore: ['README.md', 'docs/**']
 
-env:
-  AWS_ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_NAME }}
-  IMAGE_TAG: ${{ github.sha }}
-
 jobs:
   ci:
     name: Continuous Integration
@@ -65,16 +61,16 @@ jobs:
         id: ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build and Push
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ steps.ecr.outputs.registry }}/${{ env.AWS_ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          builder: ${{ steps.buildx.outputs.name }}
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ secrets.AWS_ECR_LOGIN_URI }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_NAME }}
+          IMAGE_TAG: latest
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker  push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
   deploy:
     name: Production Deployment
@@ -100,6 +96,10 @@ jobs:
           docker system prune -af
 
       - name: Run Container
+        env:
+          ECR_REGISTRY: ${{ secrets.AWS_ECR_LOGIN_URI }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_NAME }}
+          IMAGE_TAG: latest
         run: |
           docker run -d \
             --name networksecurity13 \
@@ -109,7 +109,8 @@ jobs:
             -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
             -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
             -e AWS_REGION="${{ secrets.AWS_REGION }}" \
-            ${{ steps.ecr.outputs.registry }}/${{ env.AWS_ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY}}:${{ env.IMAGE_TAG }}
+            
 
 
 
