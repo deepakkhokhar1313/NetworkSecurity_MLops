@@ -4,10 +4,7 @@ FROM python:3.13-slim
 # SET WORKING DIRECTORY
 WORKDIR /app
 
-# COPY APPLICATION CODE
-COPY . /app
-
-# INSTALL SYSTEM DEPENDENCIES
+# SYSTEM DEPENDENCIES
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     gcc \
@@ -15,24 +12,18 @@ RUN apt-get update && \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# COPY REQUIREMENTS FIRST FOR CACHING
-COPY requirements.txt .
+# COPY REQUIREMENTS USING ABSOLUTE PATH
+COPY /requirements.txt /app/requirements.txt
 
-# INSTALL PYTHON DEPENDENCIES
-RUN pip install --no-cache-dir -r requirements.txt
+# INSTALL PYTHON PACKAGES
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# INSTALL AWS CLI
-RUN pip install --no-cache-dir awscli
+# COPY APPLICATION CODE
+COPY . /app
 
-
-# ENVIRONMENT VARIABLES
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
-
-# EXPOSE PORT
+# RUNTIME CONFIG
+ENV PYTHONUNBUFFERED=1
 EXPOSE 8080
-
-# START COMMAND
 CMD ["python3", "app.py"]
 
 
